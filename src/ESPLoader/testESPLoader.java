@@ -5,11 +5,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+
 
 import java.util.zip.Deflater;
 
+
 import com.fazecast.jSerialComm.SerialPort;
+
+
 
 public class testESPLoader {
 
@@ -110,7 +113,7 @@ public class testESPLoader {
 
 		// initalize at 115200 bauds
 		comPort.setBaudRate(ESP_ROM_BAUD);
-		comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
+		//comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
 		comPort.openPort();
 
 		comPort.flushIOBuffers();
@@ -122,6 +125,7 @@ public class testESPLoader {
 
 		// first do the sync
 		for (int i = 0; i < 3; i++) {
+			comPort.flushIOBuffers();
 			if (sync() == 0) {
 
 			} else {
@@ -137,6 +141,33 @@ public class testESPLoader {
 		}
 
 		if (syncSuccess) {
+			
+			/*sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073745920) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061908) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073111164) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061904) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061912) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1072955412) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061896) , 0, 100);
+			
+			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061892) , 0, 100);*/
+			
 			// let's detect the chip, not really required but I just want to make sure that
 			// it is
 			// an ESP32 because this is what the program is for
@@ -151,8 +182,8 @@ public class testESPLoader {
 			
 			System.out.println("Changing baudrate to 921600");
 				
-			byte pkt[] = _appendArray(_int_to_bytearray(921600),_int_to_bytearray(921600)); 
-			sendCommand((byte) ESP_CHANGE_BAUDRATE, pkt /*myArray*/, 0, 0);
+			byte pkt[] = _appendArray(_int_to_bytearray(921600),_int_to_bytearray(0)); 
+			sendCommand((byte) ESP_CHANGE_BAUDRATE, pkt /*myArray*/, 0, 100);
 			
 			// second we change the comport baud rate
 			comPort.setBaudRate(921600);
@@ -178,7 +209,22 @@ public class testESPLoader {
 
 			byte file4[] = readFile("e:\\data\\ESP32\\Blink.ino.partitions.bin");
 			flashData(file4, 0x8000, 0);
+			/*try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+			}*/
+			/*byte file2[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bootloader.bin");
+			flashData(file2, 0x1000, 0);
 
+			
+			
+			byte file3[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bin");
+			flashData(file3, 0x10000, 0);
+
+			
+			byte file4[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.partitions.bin");
+			flashData(file4, 0x8000, 0);
+*/
 			// we have finish flashing lets reset the board so that the program can start
 			reset();
 
@@ -206,8 +252,8 @@ public class testESPLoader {
 
 		for (x = 0; x < 7; x++) {
 
-			byte cmd = (byte) 0x08;
-			cmdRet ret = sendCommand(cmd, cmddata, 0, 0);
+			byte cmd = (byte) ESP_SYNC;
+			cmdRet ret = sendCommand(cmd, cmddata, 0, 100);
 			if (ret.retCode == 1) {
 				response = 1;
 				break;
@@ -219,13 +265,14 @@ public class testESPLoader {
 	/*
 	 * This will send a command to the chip
 	 */
-	public static cmdRet sendCommand(byte opcode, byte buffer[], int chk, int timeout) {
+	public static cmdRet sendCommand(byte op, byte buffer[], int chk, int timeout) {
 
+		comPort.flushIOBuffers();
 		cmdRet retVal = new cmdRet();
 		int i = 0;
 		byte data[] = new byte[8 + buffer.length];
 		data[0] = 0x00;
-		data[1] = opcode;
+		data[1] = op;
 		data[2] = (byte) ((buffer.length) & 0xFF);
 		data[3] = (byte) ((buffer.length >> 8) & 0xFF);
 		data[4] = (byte) ((chk & 0xFF));
@@ -237,58 +284,65 @@ public class testESPLoader {
 			data[8 + i] = buffer[i];
 		}
 
-		// System.out.println("opcode:"+opcode);
 		int ret = 0;
-		retVal.retCode = 0;
+		retVal.retCode = -1;
 		byte buf[] = slipEncode(data);
-
+		
 		ret = comPort.writeBytes(buf, buf.length);
-
-		int numRead = comPort.readBytes(retVal.retValue, retVal.retValue.length);
-
-		if (numRead == 0) {
-			retVal.retCode = -1;
-		} else if (numRead == -1) {
-			retVal.retCode = -1;
+		//comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_BLOCKING, timeout, 0);
+		try {
+			Thread.sleep(timeout);
+		} catch (InterruptedException e) {
 		}
+		
+		for (int j = 0; j < 100 ; j++) {
+			int numRead = comPort.readBytes(retVal.retValue, retVal.retValue.length);
+			
+			if (numRead == 0) {
+				retVal.retCode = -1;
+			} else if (numRead == -1) {
+				retVal.retCode = -1;
+			}
 
-		if (retVal.retValue[0] != (byte) 0xC0) {
-			// System.out.println("invalid packet");
-			// System.out.println("Packet: " + printHex(retVal.retValue));
-			retVal.retCode = -1;
-		}
+			if (retVal.retValue[0] != (byte) 0xC0) {
+				retVal.retCode = -1;
+			}
 
-		if (retVal.retValue[0] == (byte) 0xC0) {
-			// System.out.println("This is correct!!!");
-			// System.out.println("Packet: " + printHex(retVal.retValue));
-			retVal.retCode = 1;
+			if (retVal.retValue[0] == (byte) 0xC0) {
+				retVal.retCode = 1;
+				return retVal;
+			}
+			
 		}
 
 		return retVal;
 	}
+	
+	
+
 
 	/*
 	 * This will do a SLIP encode
 	 */
+	
 	public static byte[] slipEncode(byte buffer[]) {
 		int ESP_FLASH_BLOCK = 0x400;
-		int i = 0;
-
-		byte encoded[] = new byte[ESP_FLASH_BLOCK * 3];
-		encoded[i] = (byte) 0xC0;
-		i++;
+		
+		byte encoded[] = new byte[] {(byte) (0xC0)};
+		
 		for (int x = 0; x < buffer.length; x++) {
 			if (buffer[x] == (byte) (0xC0)) {
-				encoded[i++] = (byte) (0xDB);
-				encoded[i++] = (byte) (0xDC);
+				encoded = _appendArray(encoded, new byte[] {(byte) (0xDB)});
+				encoded = _appendArray(encoded, new byte[] {(byte) (0xDC)});
+				
 			} else if (buffer[x] == (byte) (0xDB)) {
-				encoded[i++] = (byte) (0xDB);
-				encoded[i++] = (byte) (0xDD);
+				encoded = _appendArray(encoded, new byte[] {(byte) (0xDB)});
+				encoded = _appendArray(encoded, new byte[] {(byte) (0xDD)});
 			} else {
-				encoded[i++] = buffer[x];
+				encoded = _appendArray(encoded,new byte[] {buffer[x]});
 			}
 		}
-		encoded[i++] = (byte) (0xC0);
+		encoded = _appendArray(encoded,new byte[] {(byte) (0xC0)});
 
 		return encoded;
 	}
@@ -335,9 +389,10 @@ public class testESPLoader {
 		
 		byte pkt[] = _appendArray(_int_to_bytearray(data.length),_int_to_bytearray(seq)); 
 		pkt = _appendArray(pkt,_int_to_bytearray(0)); 
+		pkt = _appendArray(pkt,_int_to_bytearray(0)); //not sure
 		pkt = _appendArray(pkt, data);
 			
-		sendCommand((byte) ESP_FLASH_DEFL_DATA, pkt, _checksum(data), 0);
+		sendCommand((byte) ESP_FLASH_DEFL_DATA, pkt, _checksum(data), timeout);
 
 	}
 
@@ -345,23 +400,32 @@ public class testESPLoader {
 
 		int _flashsize = 4 * 1024 * 1024;
 
-		Struct struct = new Struct();
+		
 		if (!IS_STUB) {
+			try {
 			System.out.println("No stub...");			
-			byte pkt[] = _int_to_bytearray(0); 
-			sendCommand((byte) ESP_SPI_ATTACH, pkt, 0, 0);
+			//byte pkt[] = _int_to_bytearray(0); // 4 or 8 zero's? not sure
+			byte pkt[] = _appendArray(_int_to_bytearray(0),_int_to_bytearray(0));
+			
+			
+			System.out.println("Enabling default SPI flash mode...");
+			sendCommand((byte) ESP_SPI_ATTACH, pkt, 0, 100);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		// We are hardcoding 4MB flash for an ESP32
 		System.out.println("Configuring flash size...");
 		
 		byte pkt2[] = _appendArray(_int_to_bytearray(0),_int_to_bytearray(_flashsize)); 
-		pkt2 = _appendArray(pkt2,_int_to_bytearray(0x10000));
-		pkt2 = _appendArray(pkt2,_int_to_bytearray(4096));
+		pkt2 = _appendArray(pkt2,_int_to_bytearray(/*0x10000*/ 64*1024));
+		pkt2 = _appendArray(pkt2,_int_to_bytearray(/*4096*/ 4 * 1024));
 		pkt2 = _appendArray(pkt2,_int_to_bytearray(256));
 		pkt2 = _appendArray(pkt2,_int_to_bytearray(0xFFFF));
 		
-		sendCommand((byte) ESP_SPI_SET_PARAMS, pkt2, 0, 0);
+		sendCommand((byte) ESP_SPI_SET_PARAMS, pkt2, 0, 100);
 		
 	}
 
@@ -375,8 +439,9 @@ public class testESPLoader {
 		System.out.println("\nWriting data with filesize: " + filesize);
 
 		byte image[] = compressBytes(binaryData);
+				
 		int blocks = flash_defl_begin(filesize, image.length, offset);
-
+		
 		int seq = 0;
 		int written = 0;
 		int address = offset;
@@ -384,17 +449,11 @@ public class testESPLoader {
 
 		long t1 = System.currentTimeMillis();
 
-		//int flashWriteSize = getFlashWriteSize();
-		// System.out.println("flashWriteSize:" + flashWriteSize);
-		// System.out.println("filesize:" + filesize);
-		// System.out.println("compressedsize:" + image.length);
-		// System.out.println("blocks:" + blocks);
 
 		while (image.length - position > 0) {
-			// System.out.println("position:" + position);
-			// System.out.println("seq:" + seq);
+			
 			double percentage = Math.floor(100 * (seq + 1) / blocks);
-			// System.out.println("percentage: " + percentage);
+			System.out.println("percentage: " + percentage);
 
 			byte block[];
 
@@ -406,16 +465,19 @@ public class testESPLoader {
 
 				// we have an incomplete block (ie: less than 1024) so let pad the missing block
 				// with 0xFF
-				byte tempArray[] = new byte[FLASH_WRITE_SIZE - block.length];
+				/*byte tempArray[] = new byte[FLASH_WRITE_SIZE - block.length];
 				for (int i = 0; i < tempArray.length; i++) {
 					tempArray[i] = (byte) 0xFF;
-				}
-				block = _appendArray(block, tempArray);
+				}*/
+				//block = _appendArray(block, tempArray);
+				//System.out.println("we have an incomplete block");
 			}
 
-			// System.out.println("Block: " + printHex(block));
-
-			flash_defl_block(block, seq, DEFAULT_TIMEOUT);
+			
+			int ERASE_WRITE_TIMEOUT_PER_MB = 40 ;
+			int block_timeout = timeout_per_mb(ERASE_WRITE_TIMEOUT_PER_MB, FLASH_WRITE_SIZE);
+			// not using the block timeout yet need to modify the senCommand to have a proper timeout
+			flash_defl_block(block, seq, /*block_timeout*/ 100);
 			seq += 1;
 			written += block.length;
 			position += FLASH_WRITE_SIZE;
@@ -434,9 +496,11 @@ public class testESPLoader {
 
 		int write_size, timeout;
 		if (IS_STUB) {
+			//using a stub (will use it in the future
 			write_size = size;
 			timeout = 3000;
 		} else {
+			// no stub
 			write_size = erase_blocks * FLASH_WRITE_SIZE;
 			timeout = timeout_per_mb(ERASE_REGION_TIMEOUT_PER_MB, write_size);
 		}
@@ -446,10 +510,16 @@ public class testESPLoader {
 		byte pkt[] = _appendArray(_int_to_bytearray(write_size), _int_to_bytearray(num_blocks));
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
+		//pkt = _appendArray(pkt, _int_to_bytearray(0));//not sure
 
-		// System.out.println("params:" +printHex(pkt));
-		sendCommand((byte) ESP_FLASH_DEFL_BEGIN, pkt, 0, timeout);
-
+		
+		try {
+			sendCommand((byte) ESP_FLASH_DEFL_BEGIN, pkt, 0, timeout);
+		
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+					
 		// end time
 		long t2 = System.currentTimeMillis();
 		if (size != 0 && IS_STUB == false) {
@@ -463,8 +533,7 @@ public class testESPLoader {
 	 */
 	public static int detectChip() {
 		int chipMagicValue =readRegister(CHIP_DETECT_MAGIC_REG_ADDR);
-		//long retVal[] = readRegister(CHIP_DETECT_MAGIC_REG_ADDR);
-		//int chipMagicValue = (int) retVal[0];
+		
 		int ret = 0;
 		if (chipMagicValue == 0xfff0c101)
 			ret = ESP8266;
@@ -483,6 +552,7 @@ public class testESPLoader {
 	 * Just usefull for debuging to check what I am sending or receiving
 	 */
 	public static String printHex(byte[] bytes) {
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("[ ");
 		for (byte b : bytes) {
@@ -556,7 +626,7 @@ public class testESPLoader {
 			
 			byte packet[] = _int_to_bytearray(reg);
 			
-			ret = sendCommand(ESP_READ_REG, packet, 0, 0);
+			ret = sendCommand(ESP_READ_REG, packet, 0, 100);
 			Struct myRet = new Struct();
 
 			byte subArray[] = new byte[4];
@@ -587,7 +657,7 @@ public class testESPLoader {
 	 * @name timeoutPerMb Scales timeouts which are size-specific
 	 */
 	private static int timeout_per_mb(int seconds_per_mb, int size_bytes) {
-		int result = seconds_per_mb * (size_bytes / 1000000);
+		int result = (int) (seconds_per_mb * ((double) size_bytes / (double) 1000000));
 		if (result < 3000) {
 			return 3000;
 		} else {
@@ -600,6 +670,11 @@ public class testESPLoader {
 				(byte) ((i >> 24) & 0xff) };
 		return ret;
 	}
+	
+	private static byte[] short_to_bytearray(int i) {
+		byte ret[] = {(byte) (i & 0xff), (byte) ((i >> 8) & 0xff)};
+         return ret;
+    }
 	
 	private static int _bytearray_to_int(byte i, byte j, byte k, byte l) {
         return ((int)i | (int)(j << 8) | (int)(k << 16) | (int)(l << 24));
@@ -619,7 +694,6 @@ public class testESPLoader {
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
-
 		return allBytes;
 	}
 
@@ -633,7 +707,8 @@ public class testESPLoader {
 		// Create the compressor with highest level of compression
 		Deflater compressor = new Deflater();
 		compressor.setLevel(Deflater.BEST_COMPRESSION);
-
+		//compressor.setLevel(Deflater.SYNC_FLUSH);
+		
 		// Give the compressor the data to compress
 		compressor.setInput(uncompressedData);
 		compressor.finish();
@@ -659,4 +734,6 @@ public class testESPLoader {
 		byte[] compressedData = bos.toByteArray();
 		return compressedData;
 	}
+	
+	
 }
