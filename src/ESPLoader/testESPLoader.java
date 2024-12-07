@@ -29,6 +29,8 @@ public class testESPLoader {
 	private static final int ESP8266 = 0x8266;
 	private static final int ESP32 = 0x32;
 	private static final int ESP32S2 = 0x3252;
+	private static final int ESP32S3 = 0x3253;
+	private static final int ESP32C3 = 0x32C3;
 	private static final int ESP32_DATAREGVALUE = 0x15122500;
 	private static final int ESP8266_DATAREGVALUE = 0x00062000;
 	private static final int ESP32S2_DATAREGVALUE = 0x500;
@@ -85,8 +87,10 @@ public class testESPLoader {
 	private static final int ERASE_REGION_TIMEOUT_PER_MB = 30000; // timeout (per megabyte) for erasing a region in ms
 	private static final int MEM_END_ROM_TIMEOUT = 500;
 	private static final int MD5_TIMEOUT_PER_MB = 8000;
+	private static int chip;
 
 	private static boolean IS_STUB = false;
+	//private static boolean IS_STUB = true;
 
 	static class cmdRet {
 		int retCode;
@@ -104,13 +108,33 @@ public class testESPLoader {
 	 * 
 	 */
 	public static void main(String[] args) {
-
 		boolean syncSuccess = false;
 		// get the first port available, you might want to change that
 		comPort = SerialPort.getCommPorts()[0];
+	
 		String portName = comPort.getDescriptivePortName();
 		System.out.println("connected to: " + portName);
-
+		if(comPort.getCTS())
+			System.out.println("CTS is True");
+		else
+			System.out.println("CTS is false");
+					
+		if(comPort.getDTR())
+			System.out.println("DTR is True");
+		else
+			System.out.println("DTR is false");
+		
+		if(comPort.getRTS())
+			System.out.println("RTS is True");
+		else
+			System.out.println("RTS is false");
+		
+		System.out.println("Flow control:" +comPort.getFlowControlSettings());
+		System.out.println("Parity:" +comPort.getParity());
+		System.out.println("Stop bits:" +comPort.getNumStopBits());
+		System.out.println("Data bits:" +comPort.getNumDataBits());
+		System.out.println("Baudrate:" +comPort.getBaudRate());
+		System.out.println(ESP_ROM_BAUD);
 		// initalize at 115200 bauds
 		comPort.setBaudRate(ESP_ROM_BAUD);
 		//comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
@@ -120,12 +144,15 @@ public class testESPLoader {
 
 		// let's put the ship in boot mode
 		enterBootLoader();
+		//enterBootLoaderESP32S3();
+		System.out.println("Done with bootloader");
 
 		comPort.flushIOBuffers();
 
 		// first do the sync
 		for (int i = 0; i < 3; i++) {
 			comPort.flushIOBuffers();
+			System.out.println("sync" +i);
 			if (sync() == 0) {
 
 			} else {
@@ -141,49 +168,25 @@ public class testESPLoader {
 		}
 
 		if (syncSuccess) {
-			
-			/*sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073745920) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061908) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073111164) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061900) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061904) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061912) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1072955412) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061896) , 0, 100);
-			
-			sendCommand((byte) ESP_READ_REG, _int_to_bytearray(1073061892) , 0, 100);*/
-			
-			// let's detect the chip, not really required but I just want to make sure that
-			// it is
-			// an ESP32 because this is what the program is for
-			int chip = detectChip();
+			// let's detect the chip
+			// should work with an ESP32, ESP32S3, ESP32C3 because this is what the program is for
+			chip = detectChip();
 			if (chip == ESP32)
 				System.out.println("chip is ESP32");
-
+			if (chip == ESP32S3)
+				System.out.println("chip is ESP32S3");
+			if (chip == ESP32C3)
+				System.out.println("chip is ESP32C3");
+			
 			System.out.println(chip);
-
+			
 			// now that we have initialized the chip we can change the baud rate to 921600
 			// first we tell the chip the new baud rate
 			
 			System.out.println("Changing baudrate to 921600");
 				
 			byte pkt[] = _appendArray(_int_to_bytearray(921600),_int_to_bytearray(0)); 
-			sendCommand((byte) ESP_CHANGE_BAUDRATE, pkt /*myArray*/, 0, 100);
+			sendCommand((byte) ESP_CHANGE_BAUDRATE, pkt , 0, 100);
 			
 			// second we change the comport baud rate
 			comPort.setBaudRate(921600);
@@ -198,33 +201,47 @@ public class testESPLoader {
 			init();
 
 			// Those are the files you want to flush
+			/*byte file1[] = readFile("e:\\data\\ESP32\\boot_app0.bin");
+			flashData(file1, 0xe000, 0);
+			byte file2[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bootloader.bin");
+			flashData(file2, 0x1000, 0);
+			byte file3[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bin");
+			flashData(file3, 0x10000, 0);
+			byte file4[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.partitions.bin");
+			flashData(file4, 0x8000, 0);*/
+
+			/*byte file1[] = readFile("e:\\data\\ESP32\\boot_app0.bin");
+			flashData(file1, 0xe000, 0);
+			byte file2[] = readFile("e:\\data\\ESP32\\ESP32Blink.ino.bootloader.bin");
+			flashData(file2, 0x1000, 0);
+			byte file3[] = readFile("e:\\data\\ESP32\\ESP32Blink.ino.bin");
+			flashData(file3, 0x10000, 0);
+			byte file4[] = readFile("e:\\data\\ESP32\\ESP32Blink.ino.partitions.bin");
+			flashData(file4, 0x8000, 0);*/
+			
+			/*byte file1[] = readFile("e:\\data\\ESP32\\TTGO_TQ\\boot_app0.bin");
+			flashData(file1, 0xe000, 0);
+			byte file2[] = readFile("e:\\data\\ESP32\\TTGO_TQ\\TTGOSimpleAltimeter0.1.ino.bootloader.bin");
+			flashData(file2, 0x0, 0);
+			byte file3[] = readFile("e:\\data\\ESP32\\TTGO_TQ\\TTGOSimpleAltimeter0.1.ino.bin");
+			flashData(file3, 0x10000, 0);
+			byte file4[] = readFile("e:\\data\\ESP32\\TTGO_TQ\\TTGOSimpleAltimeter0.1.ino.partitions.bin");
+			flashData(file4, 0x8000, 0);*/
+			
 			byte file1[] = readFile("e:\\data\\ESP32\\boot_app0.bin");
 			flashData(file1, 0xe000, 0);
-
-			byte file2[] = readFile("e:\\data\\ESP32\\Blink.ino.bootloader.bin");
-			flashData(file2, 0x1000, 0);
-
-			byte file3[] = readFile("e:\\data\\ESP32\\Blink.ino.bin");
+			byte file2[] = readFile("e:\\data\\ESP32\\testESP32C3Blink.ino.bootloader.bin");
+			flashData(file2, 0x0000, 0);
+			byte file3[] = readFile("e:\\data\\ESP32\\testESP32C3Blink.ino.bin");
 			flashData(file3, 0x10000, 0);
-
-			byte file4[] = readFile("e:\\data\\ESP32\\Blink.ino.partitions.bin");
+			byte file4[] = readFile("e:\\data\\ESP32\\testESP32C3Blink.ino.partitions.bin");
 			flashData(file4, 0x8000, 0);
+			
 			/*try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 			}*/
-			/*byte file2[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bootloader.bin");
-			flashData(file2, 0x1000, 0);
-
-			
-			
-			byte file3[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.bin");
-			flashData(file3, 0x10000, 0);
-
-			
-			byte file4[] = readFile("e:\\data\\ESP32\\RocketFlightLoggerV1_27.ino.partitions.bin");
-			flashData(file4, 0x8000, 0);
-*/
+			flash_finish (); // not sure it is usefull
 			// we have finish flashing lets reset the board so that the program can start
 			reset();
 
@@ -289,6 +306,7 @@ public class testESPLoader {
 		byte buf[] = slipEncode(data);
 		
 		ret = comPort.writeBytes(buf, buf.length);
+		System.out.println(printHex(buffer));
 		//comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_BLOCKING, timeout, 0);
 		try {
 			Thread.sleep(timeout);
@@ -311,22 +329,16 @@ public class testESPLoader {
 			if (retVal.retValue[0] == (byte) 0xC0) {
 				retVal.retCode = 1;
 				return retVal;
-			}
-			
+			}	
 		}
-
 		return retVal;
 	}
-	
-	
-
 
 	/*
 	 * This will do a SLIP encode
 	 */
-	
 	public static byte[] slipEncode(byte buffer[]) {
-		int ESP_FLASH_BLOCK = 0x400;
+		//int ESP_FLASH_BLOCK = 0x400;
 		
 		byte encoded[] = new byte[] {(byte) (0xC0)};
 		
@@ -351,6 +363,7 @@ public class testESPLoader {
 	 * This does a reset in order to run the prog after flash
 	 */
 	public static void reset() {
+		
 		comPort.setRTS();
 		try {
 			Thread.sleep(100);
@@ -381,21 +394,26 @@ public class testESPLoader {
 		comPort.clearDTR();
 	}
 
-	/**
+
+	
+	/*
 	 * @name flash_defl_block Send one compressed block of data to program into SPI Flash memory
 	 */
-	
-	public static void flash_defl_block(byte data[], int seq, int timeout) {
+	public static cmdRet flash_defl_block(byte data[], int seq, int timeout) {
+		cmdRet retVal;
 		
 		byte pkt[] = _appendArray(_int_to_bytearray(data.length),_int_to_bytearray(seq)); 
 		pkt = _appendArray(pkt,_int_to_bytearray(0)); 
 		pkt = _appendArray(pkt,_int_to_bytearray(0)); //not sure
 		pkt = _appendArray(pkt, data);
 			
-		sendCommand((byte) ESP_FLASH_DEFL_DATA, pkt, _checksum(data), timeout);
-
+		retVal = sendCommand((byte) ESP_FLASH_DEFL_DATA, pkt, _checksum(data), timeout);
+		return retVal;
 	}
 
+	/*
+	 * 
+	 */
 	public static void init() {
 
 		int _flashsize = 4 * 1024 * 1024;
@@ -429,7 +447,7 @@ public class testESPLoader {
 		
 	}
 
-	/**
+	/*
 	 * @name flashData Program a full, uncompressed binary file into SPI Flash at a
 	 *       given offset. If an ESP32 and md5 string is passed in, will also verify
 	 *       memory. ESP8266 does not have checksum memory verification in ROM
@@ -444,7 +462,6 @@ public class testESPLoader {
 		
 		int seq = 0;
 		int written = 0;
-		int address = offset;
 		int position = 0;
 
 		long t1 = System.currentTimeMillis();
@@ -462,25 +479,25 @@ public class testESPLoader {
 			} else {
 				// Pad the last block
 				block = _subArray(image, position, image.length - position);
-
-				// we have an incomplete block (ie: less than 1024) so let pad the missing block
-				// with 0xFF
-				/*byte tempArray[] = new byte[FLASH_WRITE_SIZE - block.length];
-				for (int i = 0; i < tempArray.length; i++) {
-					tempArray[i] = (byte) 0xFF;
-				}*/
-				//block = _appendArray(block, tempArray);
-				//System.out.println("we have an incomplete block");
 			}
 
-			
 			int ERASE_WRITE_TIMEOUT_PER_MB = 40 ;
 			int block_timeout = timeout_per_mb(ERASE_WRITE_TIMEOUT_PER_MB, FLASH_WRITE_SIZE);
+			//System.out.println(printHex(block));
+			cmdRet retVal;
 			// not using the block timeout yet need to modify the senCommand to have a proper timeout
-			flash_defl_block(block, seq, /*block_timeout*/ 100);
+			retVal = flash_defl_block(block, seq, /*block_timeout*/ 100);
+			if (retVal.retCode ==-1) {
+				System.out.println("Retry because Ret code:" + retVal.retCode);
+				System.out.println(printHex(retVal.retValue));
+				retVal = flash_defl_block(block, seq, /*block_timeout*/ 100);
+			}
 			seq += 1;
 			written += block.length;
 			position += FLASH_WRITE_SIZE;
+			System.out.println("Ret code:" + retVal.retCode);
+			System.out.println("Ret code:" + retVal.retValue.toString());
+			System.out.println(printHex(retVal.retValue));
 		}
 
 		long t2 = System.currentTimeMillis();
@@ -496,7 +513,7 @@ public class testESPLoader {
 
 		int write_size, timeout;
 		if (IS_STUB) {
-			//using a stub (will use it in the future
+			//using a stub (will use it in the future)
 			write_size = size;
 			timeout = 3000;
 		} else {
@@ -510,8 +527,8 @@ public class testESPLoader {
 		byte pkt[] = _appendArray(_int_to_bytearray(write_size), _int_to_bytearray(num_blocks));
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
-		//pkt = _appendArray(pkt, _int_to_bytearray(0));//not sure
-
+		if(chip == ESP32S3 || chip == ESP32C3)
+			pkt = _appendArray(pkt, _int_to_bytearray(0)); //ESP32S3
 		
 		try {
 			sendCommand((byte) ESP_FLASH_DEFL_BEGIN, pkt, 0, timeout);
@@ -541,7 +558,11 @@ public class testESPLoader {
 			ret = ESP32;
 		if (chipMagicValue == 0x000007c6)
 			ret = ESP32S2;
-
+		if (chipMagicValue == 0x9)
+			ret = ESP32S3;
+		if (chipMagicValue == 0x6921506f ||  chipMagicValue == 0x1b31506f)
+			ret = ESP32C3;
+		System.out.println("chipMagicValue" +chipMagicValue);
 		return ret;
 	}
 	////////////////////////////////////////////////
@@ -636,9 +657,7 @@ public class testESPLoader {
 			subArray[3] = ret.retValue[8];
 			
 			retVals = myRet.unpack("I", subArray);
-			//retVals =_bytearray_to_int(ret.retValue[5], ret.retValue[6], ret.retValue[7], ret.retValue[8]);
 			
-			//System.out.println(	"retVals:"+retVals);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -736,4 +755,11 @@ public class testESPLoader {
 	}
 	
 	
+	public static void flash_finish () {
+		byte[] temp = new byte[2];
+		temp[0] = (byte) (0x3C);
+		temp[1] = (byte) (0x49);
+		byte pkt[] = _appendArray(temp, _int_to_bytearray(1));
+		sendCommand((byte) ESP_FLASH_END, pkt, 0, 100);
+	}
 }
