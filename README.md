@@ -42,7 +42,7 @@ Report any issue or bug that you have
 
 Suggestions and enhancement are welcome
 
-The code is free for you to download and you do not need to buy anything from me. However it cost money to try out new boards, you need to buy them and fly them so if you want to financially help me you can donate via paypal
+The code is free for you to download and you do not need to buy anything from me. However it cost money to try out new boards, you need to buy them and test them them so if you want to financially help me you can donate via paypal
 
 | Paypal | 
 | ------ |
