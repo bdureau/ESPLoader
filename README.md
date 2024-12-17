@@ -21,11 +21,33 @@ ESP32C3
 
 ESP8266
 
+
+
+Next I am planning on doing the ESP32C6, ESP32S2 and ESP32 H2
+
 If you want to make it works for other chips check the following web page to modify the protocol
 https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html
 select the chip you are using to see which codes you need to send
 I do not have all the chips to test them, drop me a note if you need help
 
+
 I have provided some test firmwares that can be flashed to your board
 
 
+# Contributing
+
+If you want to contribute to the project just fork my project or send me some code. 
+
+Report any issue or bug that you have
+
+Suggestions and enhancement are welcome
+
+The code is free for you to download and you do not need to buy anything from me. However it cost money to try out new boards, you need to buy them and fly them so if you want to financially help me you can donate via paypal
+
+| Paypal | 
+| ------ |
+| [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme/bearaltimeter) | 
+
+# Disclaimer
+
+I am not responsible for any damage that could hapen. The code is provided as it is
