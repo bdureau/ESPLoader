@@ -19,11 +19,13 @@ ESP32S3
 
 ESP32C3 
 
+ESP8266
 
 If you want to make it works for other chips check the following web page to modify the protocol
 https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html
 select the chip you are using to see which codes you need to send
 I do not have all the chips to test them, drop me a note if you need help
 
+I have provided some test firmwares that can be flashed to your board
 
 
