@@ -26,7 +26,10 @@ public class testESPLoader {
 	private static final int ESP32 = 0x32;
 	private static final int ESP32S2 = 0x3252;
 	private static final int ESP32S3 = 0x3253;
+	private static final int ESP32H2 = 0x3282;
+	private static final int ESP32C2 = 0x32C2;
 	private static final int ESP32C3 = 0x32C3;
+	private static final int ESP32C6 = 0x32C6;
 	private static final int ESP32_DATAREGVALUE = 0x15122500;
 	private static final int ESP8266_DATAREGVALUE = 0x00062000;
 	private static final int ESP32S2_DATAREGVALUE = 0x500;
@@ -157,13 +160,18 @@ public class testESPLoader {
 			chip = detectChip();
 			if (chip == ESP32)
 				System.out.println("chip is ESP32");
+			if (chip == ESP32S2)
+				System.out.println("chip is ESP32S2");
 			if (chip == ESP32S3)
 				System.out.println("chip is ESP32S3");
 			if (chip == ESP32C3)
 				System.out.println("chip is ESP32C3");
 			if (chip == ESP8266)
 				System.out.println("chip is ESP8266");
-
+			if (chip == ESP32C6)
+				System.out.println("chip is ESP32C6");
+			if (chip == ESP32H2)
+				System.out.println("chip is ESP32H2");
 			System.out.println(chip);
 
 			// now that we have initialised the chip we can change the baud rate to 921600
@@ -214,6 +222,26 @@ public class testESPLoader {
 				byte file4[] = readFile("e:\\data\\ESP32\\ESP32C3\\ESP32C3Blink.ino.partitions.bin");
 				flashCompressedData(file4, 0x8000, 0);
 			}
+			if (chip == ESP32C6) {
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S3\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x0000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
+			}
+			if (chip == ESP32S2) {
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S2\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32S2\\ESP32S2Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x1000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S2\\ESP32S2Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S2\\ESP32S2Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
+			}
 			if (chip == ESP32S3) {
 				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S3\\boot_app0.bin");
 				flashCompressedData(file1, 0xe000, 0);
@@ -221,15 +249,24 @@ public class testESPLoader {
 				flashCompressedData(file2, 0x0000, 0);
 				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bin");
 				flashCompressedData(file3, 0x10000, 0);
-				byte file4[] = readFile("e:\\data\\ESP32\\ESP32s3\\ESP32S3Blink.ino.partitions.bin");
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.partitions.bin");
 				flashCompressedData(file4, 0x8000, 0);
 			}
 			
 			if (chip == ESP8266) {
 				//Flash uncompress file
-				//byte file1[] = readFile2("/ESP8266/ESP8266_Blink.ino.bin");
 				byte file1[] = readFile("E:\\data\\ESP32\\ESP8266\\ESP8266Blink.ino.bin");
 				flashData(file1, 0x0000, 0);
+			}
+			if (chip == ESP32H2) {
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S3\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x0000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
 			}
 			
 
@@ -584,8 +621,9 @@ public class testESPLoader {
 		byte pkt[] = _appendArray(_int_to_bytearray(write_size), _int_to_bytearray(num_blocks));
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
-		if (chip == ESP32S3 || chip == ESP32C3 /*|| chip == ESP8266*/)
-			pkt = _appendArray(pkt, _int_to_bytearray(0)); // ESP32S3 or ESP32C3
+		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
+		if (chip == ESP32S3 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
 			sendCommand((byte) ESP_FLASH_DEFL_BEGIN, pkt, 0, timeout);
@@ -625,8 +663,9 @@ public class testESPLoader {
 		byte pkt[] = _appendArray(_int_to_bytearray(write_size), _int_to_bytearray(num_blocks));
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
-		if (chip == ESP32S3 || chip == ESP32C3 /*|| chip == ESP8266*/)
-			pkt = _appendArray(pkt, _int_to_bytearray(0)); // ESP32S3 or ESP32C3
+		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
+		if (chip == ESP32S3 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
 			sendCommand((byte) ESP_FLASH_BEGIN, pkt, 0, timeout);
@@ -659,8 +698,14 @@ public class testESPLoader {
 			ret = ESP32S2;
 		if (chipMagicValue == 0x9)
 			ret = ESP32S3;
+		if (chipMagicValue == 0x6f51306f)
+			ret = ESP32C2;
 		if (chipMagicValue == 0x6921506f || chipMagicValue == 0x1b31506f)
 			ret = ESP32C3;
+		if (chipMagicValue == 0x0da1806f)
+			ret = ESP32C6;
+		if (chipMagicValue == 0xca26cc22)
+			ret = ESP32H2;
 		if(DEBUG)
 			System.out.println("chipMagicValue" + chipMagicValue);
 		return ret;
