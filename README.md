@@ -23,9 +23,11 @@ ESP32C3
 
 ESP8266
 
+ESP32S2
 
 
-ESP32C6, ESP32S2 and ESP32H2 have been added and need to be tested
+
+ESP32C6 and ESP32H2 have been added and need to be tested
 
 If you want to make it works for other chips check the following web page to modify the protocol
 https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html
