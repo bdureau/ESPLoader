@@ -1,4 +1,20 @@
 package ESPLoader;
+/* 
+ * Java ESPLoader
+ * 
+ * author: boris.dureau@neuf.fr
+ * 2022-2024
+ * 
+ * 
+ * 
+ * This is a partial Java port of the ESPLoader.py tool 
+ * Currently it has been tested succesfully with the following chips: 
+ * ESP32, ESP32S2, ESP32S3, ESP32C3, ESP32H2 and ESP8266
+ * 
+ * This might also work with ESP32C6
+ * You might want to adjust the memory size for you chip
+ * Note that I have also done an Android version
+ */
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -10,7 +26,7 @@ import java.util.zip.Deflater;
 
 import com.fazecast.jSerialComm.SerialPort;
 
-public class testESPLoader {
+public class ESPLoader {
 
 	public static SerialPort comPort;
 
@@ -91,7 +107,7 @@ public class testESPLoader {
 	private static boolean IS_STUB = false;
 
 
-	private static boolean DEBUG = false;
+	private static boolean DEBUG = true;
 	static class cmdRet {
 		int retCode;
 		byte retValue[] = new byte[2048];
@@ -133,6 +149,11 @@ public class testESPLoader {
 			System.out.println("Done with bootloader");
 
 		comPort.flushIOBuffers();
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+
+		}
 
 		// first do the sync
 		for (int i = 0; i < 3; i++) {
@@ -223,13 +244,13 @@ public class testESPLoader {
 				flashCompressedData(file4, 0x8000, 0);
 			}
 			if (chip == ESP32C6) {
-				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S3\\boot_app0.bin");
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32C6\\boot_app0.bin");
 				flashCompressedData(file1, 0xe000, 0);
-				byte file2[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bootloader.bin");
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32C6\\ESP32C6Blink.ino.bootloader.bin");
 				flashCompressedData(file2, 0x0000, 0);
-				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bin");
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32C6\\ESP32C6Blink.ino.bin");
 				flashCompressedData(file3, 0x10000, 0);
-				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.partitions.bin");
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32C6\\ESP32C6Blink.ino.partitions.bin");
 				flashCompressedData(file4, 0x8000, 0);
 			}
 			if (chip == ESP32S2) {
@@ -259,13 +280,13 @@ public class testESPLoader {
 				flashData(file1, 0x0000, 0);
 			}
 			if (chip == ESP32H2) {
-				byte file1[] = readFile("e:\\data\\ESP32\\ESP32S3\\boot_app0.bin");
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32H2\\boot_app0.bin");
 				flashCompressedData(file1, 0xe000, 0);
-				byte file2[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bootloader.bin");
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32H2\\ESP32H2Blink.ino.bootloader.bin");
 				flashCompressedData(file2, 0x0000, 0);
-				byte file3[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.bin");
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32H2\\ESP32H2Blink.ino.bin");
 				flashCompressedData(file3, 0x10000, 0);
-				byte file4[] = readFile("e:\\data\\ESP32\\ESP32S3\\ESP32S3Blink.ino.partitions.bin");
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32H2\\ESP32H2Blink.ino.partitions.bin");
 				flashCompressedData(file4, 0x8000, 0);
 			}
 			
@@ -304,6 +325,8 @@ public class testESPLoader {
 			if (ret.retCode == 1) {
 				response = 1;
 				break;
+			} else {
+				System.out.println("sync ret:" + ret.retCode);
 			}
 		}
 		return response;
@@ -702,9 +725,9 @@ public class testESPLoader {
 			ret = ESP32C2;
 		if (chipMagicValue == 0x6921506f || chipMagicValue == 0x1b31506f)
 			ret = ESP32C3;
-		if (chipMagicValue == 0x0da1806f)
+		if (chipMagicValue == 0x0da1806f || chipMagicValue == 752910447)
 			ret = ESP32C6;
-		if (chipMagicValue == 0xca26cc22)
+		if (chipMagicValue == 0xca26cc22 || chipMagicValue == 0xd7b73e80/*-675856768*/)
 			ret = ESP32H2;
 		if(DEBUG)
 			System.out.println("chipMagicValue" + chipMagicValue);
@@ -870,7 +893,7 @@ public class testESPLoader {
 
 		byte[] allBytes = null;
 
-        try (InputStream inputStream = testESPLoader.class.getResourceAsStream(filename);
+        try (InputStream inputStream = ESPLoader.class.getResourceAsStream(filename);
              ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
 
             if (inputStream == null) {
