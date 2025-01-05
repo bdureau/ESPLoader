@@ -29,7 +29,7 @@ ESP32H2
 
 ESP32C6 
 
-ESP32 C2 needs to be tested
+ESP32 C2 needs to be tested waitting for Espressif to release it on the Arduino environement
 
 If you want to make it works for other chips check the following web page to modify the protocol
 https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html
