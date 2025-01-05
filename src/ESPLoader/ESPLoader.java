@@ -232,6 +232,17 @@ public class ESPLoader {
 				 byte file4[] = readFile("e:\\data\\ESP32\\ESP32Blink.ino.partitions.bin"); 
 				 flashCompressedData(file4, 0x8000, 0);
 			}
+			if (chip == ESP32C2) {
+				// waiting for the Arduino core to be ready to test it
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32C2\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32C2\\ESP32C2Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x0000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32C2\\ESP32C2Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32C2\\ESP32C2Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
+			}
 			
 			if (chip == ESP32C3) {
 				byte file1[] = readFile("e:\\data\\ESP32\\ESP32C3\\boot_app0.bin");
@@ -645,7 +656,7 @@ public class ESPLoader {
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
 		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
-		if (chip == ESP32S3 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+		if (chip == ESP32S3 || chip == ESP32C2 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
 			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
@@ -687,7 +698,7 @@ public class ESPLoader {
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
 		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
-		if (chip == ESP32S3 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+		if (chip == ESP32S3 || chip == ESP32C2|| chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
 			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
@@ -721,7 +732,7 @@ public class ESPLoader {
 			ret = ESP32S2;
 		if (chipMagicValue == 0x9)
 			ret = ESP32S3;
-		if (chipMagicValue == 0x6f51306f)
+		if ((chipMagicValue == 0x6f51306f) || chipMagicValue == 2084675695)
 			ret = ESP32C2;
 		if (chipMagicValue == 0x6921506f || chipMagicValue == 0x1b31506f)
 			ret = ESP32C3;
