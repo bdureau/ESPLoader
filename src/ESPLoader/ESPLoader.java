@@ -9,9 +9,9 @@ package ESPLoader;
  * 
  * This is a partial Java port of the ESPLoader.py tool 
  * Currently it has been tested succesfully with the following chips: 
- * ESP32, ESP32S2, ESP32S3, ESP32C3, ESP32H2 and ESP8266
+ * ESP32,ESP32P4, ESP32S2, ESP32S3, ESP32C2, ESP32C3, ESP32H2 and ESP8266
  * 
- * This might also work with ESP32C6
+ * I you need other Espressif chip to be supported please contact me and eventually send me the board
  * You might want to adjust the memory size for you chip
  * Note that I have also done an Android version
  */
@@ -40,11 +40,13 @@ public class ESPLoader {
 	private static final int CHIP_DETECT_MAGIC_REG_ADDR = 0x40001000;
 	private static final int ESP8266 = 0x8266;
 	private static final int ESP32 = 0x32;
+	private static final int ESP32P4 = 0x3254;
 	private static final int ESP32S2 = 0x3252;
 	private static final int ESP32S3 = 0x3253;
 	private static final int ESP32H2 = 0x3282;
 	private static final int ESP32C2 = 0x32C2;
 	private static final int ESP32C3 = 0x32C3;
+	private static final int ESP32C5 = 0x32C5;
 	private static final int ESP32C6 = 0x32C6;
 	private static final int ESP32_DATAREGVALUE = 0x15122500;
 	private static final int ESP8266_DATAREGVALUE = 0x00062000;
@@ -124,19 +126,17 @@ public class ESPLoader {
 	 * to flash your firmware The objective of the port is to give people a good
 	 * start. If you leave it as it is it will detect your chip and flash the blink program to your board
 	 * 
-	 * This have been successfully tested with the following chips ESP32, ESP32S3, ESP32C3 and ESP8266
+	 * This have been successfully tested with the following chips ESP32,ESP32P4, ESP32S2, ESP32S3, ESP32C2, ESP32C3, ESP32H2 and ESP8266
 	 * Some of the boards that I have tested are : LILY GO, WROOM modules
 	 * If you need some other chips or ESP32 board let me know and I will try to add them
 	 */
 	public static void main(String[] args) {
 		boolean syncSuccess = false;
 		// get the first port available, you might want to change that
-		comPort = SerialPort.getCommPorts()[0];
-
+		comPort = SerialPort.getCommPorts()[2];
 		String portName = comPort.getDescriptivePortName();
 		if(DEBUG)
 			System.out.println("connected to: " + portName);
-		
 		// initalize at 115200 bauds
 		comPort.setBaudRate(ESP_ROM_BAUD);
 		comPort.openPort();
@@ -185,14 +185,20 @@ public class ESPLoader {
 				System.out.println("chip is ESP32S2");
 			if (chip == ESP32S3)
 				System.out.println("chip is ESP32S3");
+			if (chip == ESP32C2)
+				System.out.println("chip is ESP32C2");
 			if (chip == ESP32C3)
 				System.out.println("chip is ESP32C3");
 			if (chip == ESP8266)
 				System.out.println("chip is ESP8266");
+			if (chip == ESP32C5)
+				System.out.println("chip is ESP32C5");
 			if (chip == ESP32C6)
 				System.out.println("chip is ESP32C6");
 			if (chip == ESP32H2)
 				System.out.println("chip is ESP32H2");
+			if (chip == ESP32P4)
+				System.out.println("chip is ESP32P4");
 			System.out.println(chip);
 
 			// now that we have initialised the chip we can change the baud rate to 921600
@@ -232,6 +238,17 @@ public class ESPLoader {
 				 byte file4[] = readFile("e:\\data\\ESP32\\ESP32Blink.ino.partitions.bin"); 
 				 flashCompressedData(file4, 0x8000, 0);
 			}
+			if (chip == ESP32P4) {
+				//need to be tested
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32P4\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32P4\\ESP32P4Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x0000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32P4\\ESP32P4Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32P4\\ESP32P4Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
+			}
 			if (chip == ESP32C2) {
 				// waiting for the Arduino core to be ready to test it
 				byte file1[] = readFile("e:\\data\\ESP32\\ESP32C2\\boot_app0.bin");
@@ -252,6 +269,16 @@ public class ESPLoader {
 				byte file3[] = readFile("e:\\data\\ESP32\\ESP32C3\\ESP32C3Blink.ino.bin");
 				flashCompressedData(file3, 0x10000, 0);
 				byte file4[] = readFile("e:\\data\\ESP32\\ESP32C3\\ESP32C3Blink.ino.partitions.bin");
+				flashCompressedData(file4, 0x8000, 0);
+			}
+			if (chip == ESP32C5) {
+				byte file1[] = readFile("e:\\data\\ESP32\\ESP32C5\\boot_app0.bin");
+				flashCompressedData(file1, 0xe000, 0);
+				byte file2[] = readFile("e:\\data\\ESP32\\ESP32C5\\ESP32C5Blink.ino.bootloader.bin");
+				flashCompressedData(file2, 0x2000, 0);
+				byte file3[] = readFile("e:\\data\\ESP32\\ESP32C5\\ESP32C5Blink.ino.bin");
+				flashCompressedData(file3, 0x10000, 0);
+				byte file4[] = readFile("e:\\data\\ESP32\\ESP32C5\\ESP32C5Blink.ino.partitions.bin");
 				flashCompressedData(file4, 0x8000, 0);
 			}
 			if (chip == ESP32C6) {
@@ -656,7 +683,7 @@ public class ESPLoader {
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
 		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
-		if (chip == ESP32S3 || chip == ESP32C2 || chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+		if (chip == ESP32S3|| chip == ESP32P4 || chip == ESP32C2 || chip == ESP32C3 || chip == ESP32C5 ||chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
 			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
@@ -698,7 +725,7 @@ public class ESPLoader {
 		pkt = _appendArray(pkt, _int_to_bytearray(FLASH_WRITE_SIZE));
 		pkt = _appendArray(pkt, _int_to_bytearray(offset));
 		// ESP32S3, ESP32C3, ESP32S2, ESP32C6,ESP32H2
-		if (chip == ESP32S3 || chip == ESP32C2|| chip == ESP32C3 || chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
+		if (chip == ESP32S3 || chip == ESP32P4 || chip == ESP32C2|| chip == ESP32C3 || chip == ESP32C5|| chip == ESP32C6 || chip == ESP32S2 || chip == ESP32H2 )
 			pkt = _appendArray(pkt, _int_to_bytearray(0)); 
 
 		try {
@@ -728,6 +755,8 @@ public class ESPLoader {
 			ret = ESP8266;
 		if (chipMagicValue == 0x00f01d83)
 			ret = ESP32;
+		if (chipMagicValue == 0x0addbad0)
+			ret = ESP32P4;
 		if (chipMagicValue == 0x000007c6)
 			ret = ESP32S2;
 		if (chipMagicValue == 0x9)
@@ -736,6 +765,8 @@ public class ESPLoader {
 			ret = ESP32C2;
 		if (chipMagicValue == 0x6921506f || chipMagicValue == 0x1b31506f)
 			ret = ESP32C3;
+		if (chipMagicValue == 1607549039 )
+			ret = ESP32C5;
 		if (chipMagicValue == 0x0da1806f || chipMagicValue == 752910447)
 			ret = ESP32C6;
 		if (chipMagicValue == 0xca26cc22 || chipMagicValue == 0xd7b73e80/*-675856768*/)
