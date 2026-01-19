@@ -27,6 +27,8 @@ ESP32S2
 
 ESP32H2
 
+ESP32C5 
+
 ESP32C6 
 
 ESP32 C2 needs to be tested waitting for Espressif to release it on the Arduino environement
